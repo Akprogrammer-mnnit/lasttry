@@ -28,12 +28,11 @@ export function setupYjsServer(httpServer) {
   console.log('🔧 Setting up Hocuspocus YJS server...');
 
   const yjsServer = new Server({
-    port: null,  // ✅ Don't create separate port
-    server: httpServer,  // ✅ Use the HTTP server directly
+    port: null,
+    server: httpServer,
     name: 'collab-server',
     debounce: 200,
-
-    // ✅ Add explicit WebSocket options
+    path: '/yjs',
     extensions: [],
     timeout: 30000,
 
