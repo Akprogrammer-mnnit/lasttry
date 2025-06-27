@@ -1,4 +1,6 @@
-import { Server } from '@hocuspocus/server';
+// import { Server } from '@hocuspocus/server';
+import { createServer } from '@hocuspocus/server';
+
 import { Room } from './src/models/Room.js';
 import { File } from './src/models/File.js';
 import dotenv from 'dotenv';
@@ -27,7 +29,7 @@ function parseDocumentName(docName) {
 export function setupYjsServer(httpServer) {
   console.log('🔧 Setting up Hocuspocus YJS server...');
 
-  const yjsServer = new Server({
+  const yjsServer = createServer({
     port: null,
     server: httpServer,
     name: 'collab-server',
