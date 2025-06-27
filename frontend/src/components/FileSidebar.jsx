@@ -17,8 +17,8 @@ import {
 } from 'lucide-react';
 
 const api = axios.create({
-    baseURL: import.meta.env.VITE_BACKEND_URL,
-    headers: { 'Content-Type': 'application/json' },
+    baseURL: import.meta.env.VITE_BACKEND_URL + '/api',
+    withCredentials: true,
 });
 
 function DeleteConfirmModal({ isOpen, onClose, onConfirm, itemName, itemType }) {

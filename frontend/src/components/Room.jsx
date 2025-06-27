@@ -5,11 +5,10 @@ import { useNavigate } from "react-router-dom";
 import { useSelector } from 'react-redux';
 // Configure axios base URL for your backend
 const api = axios.create({
-    baseURL: import.meta.env.VITE_BACKEND_URL,
-    headers: {
-        'Content-Type': 'application/json',
-    }
+    baseURL: import.meta.env.VITE_BACKEND_URL + '/api',
+    withCredentials: true,
 });
+
 
 const Room = () => {
     const [roomId, setRoomId] = useState('');

@@ -16,10 +16,8 @@ import Chat from './ChatComponenet.jsx';
 import { useSelector } from 'react-redux';
 
 const api = axios.create({
-    baseURL: 'https://your-backend.onrender.com', // Replace with Render URL after deployment
-    headers: {
-        'Content-Type': 'application/json',
-    }
+    baseURL: import.meta.env.VITE_BACKEND_URL + '/api',
+    withCredentials: true,
 });
 
 const languageExtensions = {
