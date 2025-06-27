@@ -25,7 +25,7 @@ function parseDocumentName(docName) {
   }
 }
 
-const server = new Server({
+const createYjsServer = new Server({
   port: 1234,
   name: 'collab-server',
   debounce: 200,
@@ -200,4 +200,4 @@ export const hasRoomSpace = (roomId) => {
   return !connections || connections.size < 2
 }
 
-export default server
+export default createYjsServer
