@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - mongodb
+    networks:
+      - editor-network
+
+  execution:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.execution
+    ports:
+      - "8080:8080"
+    volumes:
+      - \\.\pipe\docker_engine:\\.\pipe\docker_engine  # Windows named pipe
+      - ./src:/usr/src/app/src
+    environment:
+      - DOCKER_HOST=npipe:////./pipe/docker_engine  # Windows Docker host
+    networks:
+      - editor-network
+
+  # ... (rest remains same)
+  collab-server:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    command: node src/server.js
+    ports:
+      - "1234:1234"
+    networks:
+      - editor-network
+
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - editor-network
+
+volumes:
+  mongodb_data:
+
+networks:
+  editor-network:
+    driver: bridge

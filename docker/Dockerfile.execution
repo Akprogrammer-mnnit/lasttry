@@ -1,0 +1,16 @@
+FROM node:16
+
+WORKDIR /usr/src/app
+
+# Install dependencies first
+COPY package*.json ./
+COPY src/execution/package*.json ./src/execution/
+RUN npm install
+
+# Copy source files
+COPY src/execution/ ./src/execution/
+COPY src/db/ ./src/db/
+
+# For Windows, we don't install docker.io - we'll use host's Docker
+EXPOSE 8080
+CMD ["node", "src/execution/index.js"]

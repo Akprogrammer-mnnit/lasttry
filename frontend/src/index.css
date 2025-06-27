@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.cm-cursor {
+    border-left: 2px solid var(--cursor-color);
+}
+
+.cm-focused .cm-cursor {
+    border-left-color: var(--cursor-color);
+}
+
+/* Editor container */
+.editor-container {
+    height: 100%;
+    position: relative;
+    overflow: auto;
+}
