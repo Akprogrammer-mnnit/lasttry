@@ -12,7 +12,7 @@ function App() {
   const navigate = useNavigate()
   const status = useSelector((state) => state.auth.status);
   useEffect(() => {
-    axios.get(`${import.meta.env.VITE_BACKEND_URL}/users/getCurrentUser`, { withCredentials: true })
+    axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/users/getCurrentUser`, { withCredentials: true })
       .then((userData) => {
         console.log(userData);
         if (userData.data.data) {

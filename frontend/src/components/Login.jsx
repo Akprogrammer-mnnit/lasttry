@@ -19,7 +19,7 @@ const Login = () => {
     const onSubmit = async (data) => {
         setloading(true);
         try {
-            const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/users/login`, data, {
+            const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/users/login`, data, {
                 withCredentials: true,
             });
             if (response) {
