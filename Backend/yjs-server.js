@@ -24,14 +24,21 @@ function parseDocumentName(docName) {
   };
 }
 
-export function setupYjsServer(server) {
+export function setupYjsServer(httpServer) {
+  console.log('🔧 Setting up Hocuspocus YJS server...');
+
   const yjsServer = new Server({
-    server,         // ✅ attach to your Express server
-    path: '/yjs',   // ✅ WS endpoint: /yjs
+    port: null,  // ✅ Don't create separate port
+    server: httpServer,  // ✅ Use the HTTP server directly
     name: 'collab-server',
     debounce: 200,
 
+    // ✅ Add explicit WebSocket options
+    extensions: [],
+    timeout: 30000,
+
     async onConnect(data) {
+      console.log(`🔗 YJS Connect attempt: ${data.documentName}`);
       const { roomId, filePath, isValid } = parseDocumentName(data.documentName);
       const ws = data.connection;
 
@@ -170,10 +177,21 @@ export function setupYjsServer(server) {
       }
 
       return data.document;
+    },
+
+    // ✅ Add error handling
+    onError(data) {
+      console.error('❌ YJS Server Error:', data.error);
+    },
+
+    // ✅ Add upgrade handling
+    onUpgrade(data) {
+      console.log('🔄 WebSocket upgrade request');
+      return true;
     }
   });
 
-
+  console.log('✅ Hocuspocus YJS server configured');
   return yjsServer;
 }
 

@@ -36,7 +36,23 @@ app.use(express.json({ limit: '16kb' }));
 app.use(express.urlencoded({ extended: true, limit: '16kb' }));
 app.use(express.static('public'));
 app.use(cookieParser());
-
+app.use((req, res, next) => {
+  if (req.headers.upgrade === 'websocket') {
+    console.log('🔄 WebSocket upgrade request to:', req.url);
+  }
+  next();
+});
+app.get('/test-ws', (req, res) => {
+  res.send(`
+    <script>
+      const ws = new WebSocket('${req.protocol === 'https' ? 'wss' : 'ws'}://${req.get('host')}/yjs');
+      ws.onopen = () => console.log('✅ WebSocket connected');
+      ws.onerror = (err) => console.error('❌ WebSocket error:', err);
+      ws.onclose = () => console.log('🔒 WebSocket closed');
+    </script>
+    <h1>Check console for WebSocket test results</h1>
+  `);
+});
 // API routes
 import roomRoutes from './routes/roomRoutes.js';
 import fileRoutes from './routes/fileRoutes.js';

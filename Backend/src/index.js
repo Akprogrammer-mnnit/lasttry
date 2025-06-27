@@ -9,17 +9,47 @@ dotenv.config({ path: './.env' });
 
 const startServices = async () => {
   try {
+    console.log('🚀 Starting services...');
+
+    // Connect to database first
     await connectDB();
+    console.log('✅ Database connected');
 
+    // Setup YJS server (attach to HTTP server)
     const yjsServer = setupYjsServer(server);
-    yjsServer.listen(); // ✅ Make sure this completes before .listen
+    console.log('✅ YJS server configured');
 
-    setupExecutionService(server); // also attached properly
+    // Setup execution service
+    setupExecutionService(server);
+    console.log('✅ Execution service configured');
 
     const port = process.env.PORT || 3000;
-    server.listen(port, () => {
+
+    // Start the server
+    const httpServer = server.listen(port, () => {
       console.log(`🚀 Server running on port ${port}`);
+      console.log(`🔗 WebSocket endpoints:`);
+      console.log(`   - YJS: ws://localhost:${port}/yjs`);
+      console.log(`   - Execution: ws://localhost:${port}/execution`);
     });
+
+    // Handle server shutdown gracefully
+    process.on('SIGTERM', () => {
+      console.log('🛑 SIGTERM received, shutting down gracefully');
+      httpServer.close(() => {
+        console.log('✅ Server closed');
+        process.exit(0);
+      });
+    });
+
+    process.on('SIGINT', () => {
+      console.log('🛑 SIGINT received, shutting down gracefully');
+      httpServer.close(() => {
+        console.log('✅ Server closed');
+        process.exit(0);
+      });
+    });
+
   } catch (error) {
     console.error('❌ Failed to start services:', error);
     process.exit(1);
