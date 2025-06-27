@@ -1,5 +1,5 @@
 import { server, io } from './app.js';
-import { createYjsServer } from './yjs-server.js';
+import { createYjsServer } from '../yjs-server.js';
 import { createExecutionService } from './execution/index.js';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
