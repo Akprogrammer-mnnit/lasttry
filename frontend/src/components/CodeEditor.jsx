@@ -19,7 +19,7 @@ const api = axios.create({
     baseURL: import.meta.env.VITE_BACKEND_URL + '/api',
     withCredentials: true,
 });
-
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 const languageExtensions = {
     javascript: javascript(),
     python: python(),
@@ -144,8 +144,8 @@ const CodeEditor = () => {
         if (wsRef.current) {
             wsRef.current.close();
         }
+        wsRef.current = new WebSocket(`${BACKEND_URL.replace(/^http/, 'ws')}/execution`);
 
-        wsRef.current = new WebSocket('wss://your-backend.onrender.com/execution'); // Replace with Render URL after deployment
 
         wsRef.current.onopen = () => {
             setIsConnected(true);
@@ -214,7 +214,7 @@ const CodeEditor = () => {
         ydocRef.current = ydoc;
 
         const provider = new HocuspocusProvider({
-            url: 'wss://your-backend.onrender.com/yjs', // Replace with Render URL after deployment
+            url: `${BACKEND_URL.replace(/^http/, 'ws')}/yjs`,
             name: documentName,
             document: ydoc,
         });
@@ -404,7 +404,7 @@ const CodeEditor = () => {
 
         const ydoc = new Y.Doc();
         const provider = new HocuspocusProvider({
-            url: 'wss://your-backend.onrender.com/yjs', // Replace with Render URL after deployment
+            url: `${BACKEND_URL.replace(/^http/, 'ws')}/yjs`,
             name: `${roomId}-default`,
             document: ydoc,
         });
