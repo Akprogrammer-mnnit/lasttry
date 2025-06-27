@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import * as Y from 'yjs';
 import { HocuspocusProvider } from '@hocuspocus/provider';
@@ -15,10 +14,10 @@ import { indentWithTab } from '@codemirror/commands';
 import FileExplorer from './FileSidebar.jsx';
 import Chat from './ChatComponenet.jsx';
 import { useSelector } from 'react-redux';
+
 const api = axios.create({
-    baseURL: import.meta.env.VITE_BACKEND_URL,
-    headers:
-    {
+    baseURL: 'https://your-backend.onrender.com', // Replace with Render URL after deployment
+    headers: {
         'Content-Type': 'application/json',
     }
 });
@@ -56,8 +55,8 @@ const CodeEditor = () => {
     const [currentFile, setCurrentFile] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
     const [lastSaved, setLastSaved] = useState(null);
-    const [fileExplorerKey, setFileExplorerKey] = useState(0);
     const userInfo = useSelector((state) => state.auth.userData);
+
     const addToTerminal = (message, type = 'info') => {
         const timestamp = new Date().toLocaleTimeString();
         setTerminalContent(prev => [...prev, { message, type, timestamp }]);
@@ -143,13 +142,12 @@ const CodeEditor = () => {
         }
     };
 
-
     const connectExecutionWebSocket = () => {
         if (wsRef.current) {
             wsRef.current.close();
         }
 
-        wsRef.current = new WebSocket('ws://localhost:8080');
+        wsRef.current = new WebSocket('wss://your-backend.onrender.com/execution'); // Replace with Render URL after deployment
 
         wsRef.current.onopen = () => {
             setIsConnected(true);
@@ -218,7 +216,7 @@ const CodeEditor = () => {
         ydocRef.current = ydoc;
 
         const provider = new HocuspocusProvider({
-            url: 'ws://localhost:1234',
+            url: 'wss://your-backend.onrender.com/yjs', // Replace with Render URL after deployment
             name: documentName,
             document: ydoc,
         });
@@ -237,7 +235,6 @@ const CodeEditor = () => {
 
         const ytext = ydoc.getText('codemirror');
         ytextRef.current = ytext;
-
 
         const state = EditorState.create({
             doc: ytext.toString(),
@@ -279,10 +276,8 @@ const CodeEditor = () => {
         try {
             console.log("Selected file: ", file);
 
-
             const response = await api.get(`/files/${roomId}/${encodeURIComponent(file.path)}`);
             const content = response.data.content || '';
-
 
             const documentName = `${roomId}::${file.path}`;
             const { ydoc, provider } = connectHocuspocus(documentName);
@@ -400,7 +395,6 @@ const CodeEditor = () => {
         }
     };
 
-
     useEffect(() => {
         if (terminalRef.current) {
             terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
@@ -412,7 +406,7 @@ const CodeEditor = () => {
 
         const ydoc = new Y.Doc();
         const provider = new HocuspocusProvider({
-            url: 'ws://localhost:1234',
+            url: 'wss://your-backend.onrender.com/yjs', // Replace with Render URL after deployment
             name: `${roomId}-default`,
             document: ydoc,
         });
@@ -583,8 +577,6 @@ const CodeEditor = () => {
                                     </div>
                                 </button>
 
-
-
                                 <button
                                     onClick={clearTerminal}
                                     className="bg-white/10 hover:bg-white/20 text-white px-6 py-2 rounded-xl font-medium transition-all duration-200 border border-white/30 hover:border-white/50"
@@ -668,7 +660,8 @@ const CodeEditor = () => {
                                                 })
                                             )}
                                         </div>
-                                    </div></>
+                                    </div>
+                                </>
                             ) : (null)
                         }
                     </div>
