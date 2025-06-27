@@ -26,8 +26,8 @@ function parseDocumentName(docName) {
 
 export function setupYjsServer(server) {
   const yjsServer = new Server({
-    server,         // ✅ use shared server
-    path: '/yjs',   // ✅ serve Yjs WebSocket at /yjs
+    server,         // ✅ attach to your Express server
+    path: '/yjs',   // ✅ WS endpoint: /yjs
     name: 'collab-server',
     debounce: 200,
 
@@ -170,12 +170,16 @@ export function setupYjsServer(server) {
       }
 
       return data.document;
-    },
+    }
   });
+
+  // ✅ THIS IS CRITICAL — activates Hocuspocus server
+  yjsServer.listen();
 
   return yjsServer;
 }
 
+// 🧹 Background cleanup every hour
 setInterval(async () => {
   try {
     const result = await Room.cleanupOldRooms();
@@ -192,6 +196,7 @@ setInterval(async () => {
   }
 }, 60 * 60 * 1000);
 
+// Optional helper exports
 export const getRoomConnectionCount = (roomId) => {
   const connections = roomConnections.get(roomId);
   return connections ? connections.size : 0;

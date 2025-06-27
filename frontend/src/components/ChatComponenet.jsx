@@ -50,7 +50,7 @@ const Chat = ({ roomId, userId, username }) => {
         if (!roomId || !userId || !username) return;
         if (socketRef.current) return;
 
-        const socket = io(import.meta.env.VITE_SOCKET_URL, {
+        const socket = io(import.meta.env.VITE_BACKEND_URL, {
             withCredentials: true,
             transports: ['websocket'],
             timeout: 20000,
