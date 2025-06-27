@@ -53,6 +53,7 @@ const CodeEditor = () => {
     const [currentFile, setCurrentFile] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
     const [lastSaved, setLastSaved] = useState(null);
+    const [fileExplorerKey, setFileExplorerKey] = useState(0);
     const userInfo = useSelector((state) => state.auth.userData);
 
     const addToTerminal = (message, type = 'info') => {
@@ -145,7 +146,6 @@ const CodeEditor = () => {
             wsRef.current.close();
         }
         wsRef.current = new WebSocket(`${BACKEND_URL.replace(/^http/, 'ws')}/execution`);
-
 
         wsRef.current.onopen = () => {
             setIsConnected(true);
