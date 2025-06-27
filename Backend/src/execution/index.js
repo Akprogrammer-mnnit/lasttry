@@ -117,6 +117,3 @@ export const createExecutionService = () => {
     throw error;
   }
 };
-
-// Only call createExecutionService once
-createExecutionService();

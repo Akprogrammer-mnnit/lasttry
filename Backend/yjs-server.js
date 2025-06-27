@@ -197,6 +197,5 @@ export const hasRoomSpace = (roomId) => {
   return !connections || connections.size < 2;
 };
 
-createYjsServer.listen();
 
 export default createYjsServer;
