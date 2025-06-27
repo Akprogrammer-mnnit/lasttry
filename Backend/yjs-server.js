@@ -173,8 +173,6 @@ export function setupYjsServer(server) {
     }
   });
 
-  // ✅ THIS IS CRITICAL — activates Hocuspocus server
-  yjsServer.listen();
 
   return yjsServer;
 }

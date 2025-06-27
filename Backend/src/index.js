@@ -11,15 +11,14 @@ const startServices = async () => {
   try {
     await connectDB();
 
-    // ⬇️ Attach both WS services to shared Express server
-    setupYjsServer(server);
-    setupExecutionService(server);
+    const yjsServer = setupYjsServer(server);
+    yjsServer.listen(); // ✅ Make sure this completes before .listen
+
+    setupExecutionService(server); // also attached properly
 
     const port = process.env.PORT || 3000;
     server.listen(port, () => {
       console.log(`🚀 Server running on port ${port}`);
-      console.log(`🧠 Yjs WebSocket at /yjs`);
-      console.log(`⚙️ Code Execution WebSocket at /execution`);
     });
   } catch (error) {
     console.error('❌ Failed to start services:', error);
