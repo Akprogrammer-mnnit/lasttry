@@ -148,9 +148,8 @@ const CodeEditor = () => {
     const connectExecutionWebSocket = () => {
         if (wsRef.current) {
             wsRef.current.close();
-
         }
-        wsRef.current = new WebSocket('wss://https://codeeditor-backend-hbqi.onrender.com/execution');
+        wsRef.current = new WebSocket(getWebSocketUrl('/execution'));
 
         wsRef.current.onopen = () => {
             setIsConnected(true);
@@ -219,7 +218,7 @@ const CodeEditor = () => {
         ydocRef.current = ydoc;
 
         const provider = new HocuspocusProvider({
-            url: 'wss://codeeditor-backend-hbqi.onrender.com/yjs',
+            url: getWebSocketUrl('/yjs'),
             name: documentName,
             document: ydoc,
         });
@@ -409,7 +408,7 @@ const CodeEditor = () => {
 
         const ydoc = new Y.Doc();
         const provider = new HocuspocusProvider({
-            url: 'wss://codeeditor-backend-hbqi.onrender.com/yjs',
+            url: getWebSocketUrl('/yjs'),
             name: `${roomId}-default`,
             document: ydoc,
         });
