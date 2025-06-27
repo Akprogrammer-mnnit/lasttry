@@ -1,5 +1,5 @@
 import { server, io } from './app.js';
-import createYjsServer from './yjs-server.js';
+import createYjsServer from '../yjs-server.js';
 import { createExecutionService } from './execution/index.js';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
@@ -10,7 +10,7 @@ dotenv.config({ path: './.env' });
 const startServices = async () => {
   try {
     await connectDB();
-    createYjsServer.listen(); // Call listen() on the server instance
+    createYjsServer.listen();
     createExecutionService();
     const port = process.env.PORT || 3000;
     server.listen(port, () => {
