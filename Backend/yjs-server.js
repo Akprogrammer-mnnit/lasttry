@@ -1,13 +1,11 @@
 import { Server } from '@hocuspocus/server';
-import { slateNodesToInsertDelta, yTextToSlateElement } from '@slate-yjs/core';
-import mongoose from 'mongoose';
 import { Room } from './models/Room.js';
 import { File } from './models/File.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const roomConnections = new Map(); // roomId -> Set of WebSocket objects
+const roomConnections = new Map();
 
 function parseDocumentName(docName) {
   const parts = docName.split('::');
