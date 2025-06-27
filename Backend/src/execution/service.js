@@ -1,101 +1,122 @@
 import { WebSocketServer } from 'ws';
 import axios from 'axios';
 
+let wss = null; // Singleton to prevent multiple instances
+
 export const createExecutionService = () => {
-  const wss = new WebSocketServer({ port: 8080 });
+  if (wss) {
+    console.log('Execution service already running on ws://localhost:8080');
+    return wss; // Return existing instance
+  }
 
-  const languageConfigs = {
-    javascript: { language: 'javascript', version: '18.15.0' },
-    python: { language: 'python', version: '3.10.0' },
-    c: { language: 'c', version: '10.2.0' },
-    cpp: { language: 'cpp', version: '10.2.0' }
-  };
+  try {
+    wss = new WebSocketServer({ port: 8080 });
+    console.log('Execution service running on ws://localhost:8080');
 
-  const sendMessage = (ws, type, data, timestamp = true) => {
-    const message = {
-      type,
-      data,
-      ...(timestamp && { timestamp: new Date().toISOString() })
+    const languageConfigs = {
+      javascript: { language: 'javascript', version: '18.15.0' },
+      python: { language: 'python', version: '3.10.0' },
+      c: { language: 'c', version: '10.2.0' },
+      cpp: { language: 'cpp', version: '10.2.0' }
     };
-    ws.send(JSON.stringify(message));
-  };
 
-  wss.on('connection', (ws) => {
-    sendMessage(ws, 'system', '🔗 Connected to execution service', false);
+    const sendMessage = (ws, type, data, timestamp = true) => {
+      const message = {
+        type,
+        data,
+        ...(timestamp && { timestamp: new Date().toISOString() })
+      };
+      ws.send(JSON.stringify(message));
+    };
 
-    ws.on('message', async (message) => {
-      let parsed;
-      try {
-        parsed = JSON.parse(message);
-      } catch (err) {
-        sendMessage(ws, 'error', '❌ Invalid JSON format');
-        return;
-      }
+    wss.on('connection', (ws) => {
+      sendMessage(ws, 'system', '🔗 Connected to execution service', false);
 
-      const { code, language, sessionId } = parsed;
-      const config = languageConfigs[language];
+      ws.on('message', async (message) => {
+        let parsed;
+        try {
+          parsed = JSON.parse(message);
+        } catch (err) {
+          sendMessage(ws, 'error', '❌ Invalid JSON format');
+          return;
+        }
 
-      if (!config) {
-        sendMessage(ws, 'error', `❌ Language '${language}' not supported. Available: ${Object.keys(languageConfigs).join(', ')}`);
-        return;
-      }
+        const { code, language, sessionId } = parsed;
+        const config = languageConfigs[language];
 
-      if (!code || code.trim() === '') {
-        sendMessage(ws, 'error', '❌ No code provided');
-        return;
-      }
+        if (!config) {
+          sendMessage(ws, 'error', `❌ Language '${language}' not supported. Available: ${Object.keys(languageConfigs).join(', ')}`);
+          return;
+        }
 
-      // Input validation: limit code length
-      if (code.length > 10000) {
-        sendMessage(ws, 'error', '❌ Code exceeds 10,000 characters');
-        return;
-      }
+        if (!code || code.trim() === '') {
+          sendMessage(ws, 'error', '❌ No code provided');
+          return;
+        }
 
-      sendMessage(ws, 'system', `🚀 Executing ${language.toUpperCase()} code...`);
+        if (code.length > 10000) {
+          sendMessage(ws, 'error', '❌ Code exceeds 10,000 characters');
+          return;
+        }
 
-      try {
-        console.log(`Executing code for session ${sessionId}, language: ${language}`);
-        const response = await axios.post('https://emkc.org/api/v2/piston/execute', {
-          language: config.language,
-          version: config.version,
-          files: [{ content: code }],
-          stdin: '',
-          args: [],
-          compile_timeout: 10000,
-          run_timeout: 5000
-        });
+        sendMessage(ws, 'system', `🚀 Executing ${language.toUpperCase()} code...`);
 
-        const { run } = response.data;
-
-        if (run.stdout) {
-          run.stdout.split('\n').forEach(line => {
-            if (line.trim()) sendMessage(ws, 'output', line, false);
+        try {
+          console.log(`Executing code for session ${sessionId}, language: ${language}`);
+          const response = await axios.post('https://emkc.org/api/v2/piston/execute', {
+            language: config.language,
+            version: config.version,
+            files: [{ content: code }],
+            stdin: '',
+            args: [],
+            compile_timeout: 10000,
+            run_timeout: 5000
           });
-        }
 
-        if (run.stderr) {
-          run.stderr.split('\n').forEach(line => {
-            if (line.trim()) sendMessage(ws, 'error', line, false);
-          });
-        }
+          const { run } = response.data;
 
-        if (!run.stdout && !run.stderr) {
-          sendMessage(ws, 'output', '(no output)', false);
-        }
+          if (run.stdout) {
+            run.stdout.split('\n').forEach(line => {
+              if (line.trim()) sendMessage(ws, 'output', line, false);
+            });
+          }
 
-        sendMessage(ws, 'end', '✅ Execution completed');
-      } catch (error) {
-        console.error('Execution error:', error);
-        sendMessage(ws, 'error', error.response?.data?.message || '💥 Execution failed');
-      }
+          if (run.stderr) {
+            run.stderr.split('\n').forEach(line => {
+              if (line.trim()) sendMessage(ws, 'error', line, false);
+            });
+          }
+
+          if (!run.stdout && !run.stderr) {
+            sendMessage(ws, 'output', '(no output)', false);
+          }
+
+          sendMessage(ws, 'end', '✅ Execution completed');
+        } catch (error) {
+          console.error('Execution error:', error);
+          sendMessage(ws, 'error', error.response?.data?.message || '💥 Execution failed');
+        }
+      });
+
+      ws.on('close', () => {
+        console.log('Client disconnected');
+      });
+
+      ws.on('error', (error) => {
+        console.error('WebSocket error:', error);
+      });
     });
 
-    ws.on('close', () => {
-      console.log('Client disconnected');
+    wss.on('error', (error) => {
+      console.error('WebSocket server error:', error);
     });
-  });
 
-  console.log('Execution service running on ws://localhost:8080');
+    return wss;
+  } catch (error) {
+    console.error('Failed to start execution service:', error);
+    throw error;
+  }
 };
 
+// Only call createExecutionService once
 createExecutionService();

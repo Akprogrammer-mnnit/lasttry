@@ -1,23 +1,39 @@
-import dotenv from 'dotenv'
-import { server } from './app.js'
-import connectDB from './db/index.js'
-import './execution/index.js'
-import yjsServer from '../yjs-server.js'
+import { server, io } from './app.js';
+import { createYjsServer } from './yjs-server.js';
+import { createExecutionService } from './execution/index.js';
+import mongoose from 'mongoose';
+import dotenv from 'dotenv';
 
-dotenv.config({ path: './.env' })
+dotenv.config({ path: './.env' });
 
-connectDB()
-  .then(() => {
-    const PORT = process.env.PORT || 3000
+// MongoDB connection
+const connectDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    console.log('MongoDB connected');
+  } catch (error) {
+    console.error('MongoDB connection error:', error);
+    process.exit(1);
+  }
+};
 
-    server.listen(PORT, () => {
-      console.log(`🚀 Express server running on port ${PORT}`)
-    })
+const startServices = async () => {
+  try {
+    await connectDB();
+    createYjsServer();
+    createExecutionService();
 
-    yjsServer.listen().then(() => {
-      console.log('✅ Yjs WebSocket server running on ws://localhost:1234')
-    })
-  })
-  .catch((error) => {
-    console.error("❌ MongoDB connection error:", error)
-  })
+    const port = process.env.PORT || 3000;
+    server.listen(port, () => {
+      console.log(`🚀 Express server running on port ${port}`);
+    });
+  } catch (error) {
+    console.error('Failed to start services:', error);
+    process.exit(1);
+  }
+};
+
+startServices();
