@@ -14,16 +14,13 @@ import { indentWithTab } from '@codemirror/commands';
 import FileExplorer from './FileSidebar.jsx';
 import Chat from './ChatComponenet.jsx';
 import { useSelector } from 'react-redux';
+import { io } from 'socket.io-client';
 
 const api = axios.create({
     baseURL: import.meta.env.VITE_BACKEND_URL + '/api',
     withCredentials: true,
 });
-const getWebSocketUrl = (path) => {
-    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const host = new URL(import.meta.env.VITE_BACKEND_URL).host;
-    return `${protocol}://${host}${path}`;
-};
+
 const languageExtensions = {
     javascript: javascript(),
     python: python(),
@@ -42,7 +39,7 @@ const CodeEditor = () => {
     const awarenessRef = useRef(null);
     const ydocRef = useRef(null);
     const ytextRef = useRef(null);
-    const wsRef = useRef(null);
+    const socketRef = useRef(null);
     const isExplicitClose = useRef(false);
     const saveTimeoutRef = useRef(null);
     const isLoadingFile = useRef(false);
@@ -79,7 +76,9 @@ const CodeEditor = () => {
             output: '📤',
             error: '❌',
             info: 'ℹ️',
-            success: '✅'
+            success: '✅',
+            stdout: '📤',
+            stderr: '⚠️'
         };
 
         const colors = {
@@ -88,6 +87,8 @@ const CodeEditor = () => {
             error: 'text-red-400',
             info: 'text-gray-300',
             success: 'text-green-500',
+            stdout: 'text-green-400',
+            stderr: 'text-yellow-400'
         };
 
         return {
@@ -145,62 +146,66 @@ const CodeEditor = () => {
         }
     };
 
-    const connectExecutionWebSocket = () => {
-        if (wsRef.current) {
-            wsRef.current.close();
+    const connectExecutionSocket = () => {
+        if (socketRef.current) {
+            socketRef.current.disconnect();
         }
-        wsRef.current = new WebSocket(getWebSocketUrl('/execution'));
 
-        wsRef.current.onopen = () => {
+        const socket = io(`${import.meta.env.VITE_BACKEND_URL}/code-execution`, {
+            withCredentials: true,
+            transports: ['websocket'],
+            autoConnect: true
+        });
+
+        socketRef.current = socket;
+
+        socket.on('connect', () => {
             setIsConnected(true);
-            addToTerminal('Connected to execution service', 'system');
-        };
+            console.log('Connected to code execution service');
+        });
 
-        wsRef.current.onmessage = (event) => {
-            try {
-                const data = JSON.parse(event.data);
-
-                switch (data.type) {
-                    case 'system':
-                        addToTerminal(data.data, 'system');
-                        break;
-                    case 'output':
-                        if (data.data && data.data.trim()) {
-                            addToTerminal(data.data.trim(), 'output');
-                        }
-                        break;
-                    case 'end':
-                        addToTerminal(data.data, 'success');
-                        setIsExecuting(false);
-                        break;
-                    case 'error':
-                        if (data.data && data.data.trim()) {
-                            addToTerminal(data.data.trim(), 'error');
-                        }
-                        setIsExecuting(false);
-                        break;
-                    default:
-                        addToTerminal(`Unknown message: ${data.data}`, 'error');
-                }
-            } catch (err) {
-                addToTerminal(`Parse error: ${event.data}`, 'error');
-            }
-        };
-
-        wsRef.current.onerror = () => {
-            addToTerminal('WebSocket connection error occurred', 'error');
+        socket.on('disconnect', () => {
             setIsConnected(false);
             setIsExecuting(false);
-        };
-
-        wsRef.current.onclose = () => {
             if (!isExplicitClose.current) {
-                addToTerminal('Connection lost. Attempting to reconnect...', 'error');
-                setTimeout(connectExecutionWebSocket, 3000);
+                addToTerminal('Disconnected from execution service', 'error');
             }
+        });
+
+        socket.on('code-execution-status', (data) => {
+            addToTerminal(data.message, 'system');
+        });
+
+        socket.on('code-execution-output', (data) => {
+            if (data.message && data.message.trim()) {
+                addToTerminal(data.message.trim(), data.type || 'output');
+            }
+        });
+
+        socket.on('code-execution-error', (data) => {
+            if (data.message && data.message.trim()) {
+                addToTerminal(data.message.trim(), 'error');
+            }
+            setIsExecuting(false);
+        });
+
+        socket.on('code-execution-warning', (data) => {
+            if (data.message && data.message.trim()) {
+                addToTerminal(data.message.trim(), 'stderr');
+            }
+        });
+
+        socket.on('code-execution-complete', (data) => {
+            addToTerminal(data.message, data.success ? 'success' : 'error');
+            setIsExecuting(false);
+        });
+
+        socket.on('connect_error', (error) => {
+            console.error('Socket connection error:', error);
+            addToTerminal('Connection error: ' + error.message, 'error');
             setIsConnected(false);
             setIsExecuting(false);
-        };
+        });
     };
 
     const connectHocuspocus = (documentName) => {
@@ -218,7 +223,7 @@ const CodeEditor = () => {
         ydocRef.current = ydoc;
 
         const provider = new HocuspocusProvider({
-            url: getWebSocketUrl('/yjs'),
+            url: `${import.meta.env.VITE_BACKEND_WS}`,
             name: documentName,
             document: ydoc,
         });
@@ -272,9 +277,28 @@ const CodeEditor = () => {
 
     const handleFileSelect = async (file) => {
         if (isLoadingFile.current) return;
+        if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
+        }
+
+        if (editorViewRef.current) {
+            editorViewRef.current.destroy();
+            editorViewRef.current = null;
+        }
+
+        if (providerRef.current) {
+            providerRef.current.destroy();
+            providerRef.current = null;
+        }
+
+        if (ydocRef.current) {
+            ydocRef.current.destroy();
+            ydocRef.current = null;
+        }
+
+        isExplicitClose.current = true;
 
         isLoadingFile.current = true;
-
         try {
             console.log("Selected file: ", file);
 
@@ -327,12 +351,16 @@ const CodeEditor = () => {
     };
 
     const executeCode = () => {
-        if (isExecuting || !isConnected) {
+        if (isExecuting || !isConnected || !socketRef.current) {
+            if (!isConnected) {
+                addToTerminal('Not connected to execution service', 'error');
+            } else if (isExecuting) {
+                addToTerminal('Code is already executing', 'error');
+            }
             return;
         }
 
         setIsExecuting(true);
-        addToTerminal(`Starting ${language.toUpperCase()} execution...`, 'system');
 
         try {
             const rawCode = ytextRef.current ? ytextRef.current.toString() : '';
@@ -344,11 +372,12 @@ const CodeEditor = () => {
                 return;
             }
 
-            wsRef.current.send(JSON.stringify({
+            socketRef.current.emit('execute-code', {
                 code: cleanCode,
                 language,
                 sessionId: roomId
-            }));
+            });
+
         } catch (err) {
             addToTerminal(`Failed to execute: ${err.message}`, 'error');
             setIsExecuting(false);
@@ -373,8 +402,8 @@ const CodeEditor = () => {
 
             if (response.data.success) {
                 isExplicitClose.current = true;
-                if (wsRef.current) {
-                    wsRef.current.close();
+                if (socketRef.current) {
+                    socketRef.current.disconnect();
                 }
                 navigate('/');
             } else {
@@ -403,49 +432,17 @@ const CodeEditor = () => {
         }
     }, [terminalContent]);
 
+
     useEffect(() => {
-        connectExecutionWebSocket();
-
-        const ydoc = new Y.Doc();
-        const provider = new HocuspocusProvider({
-            url: getWebSocketUrl('/yjs'),
-            name: `${roomId}-default`,
-            document: ydoc,
-        });
-
-        ydocRef.current = ydoc;
-        providerRef.current = provider;
-        awarenessRef.current = provider.awareness;
-
-        createEditor(ydoc, provider);
+        connectExecutionSocket();
 
         return () => {
-            if (saveTimeoutRef.current) {
-                clearTimeout(saveTimeoutRef.current);
-            }
-
-            isExplicitClose.current = true;
-
-            if (editorViewRef.current) {
-                editorViewRef.current.destroy();
-            }
-
-            if (providerRef.current) {
-                providerRef.current.destroy();
-            }
-
-            if (ydocRef.current) {
-                ydocRef.current.destroy();
-            }
-
-            if (wsRef.current && (
-                wsRef.current.readyState === WebSocket.CONNECTING ||
-                wsRef.current.readyState === WebSocket.OPEN
-            )) {
-                wsRef.current.close();
+            if (socketRef.current) {
+                socketRef.current.disconnect();
+                socketRef.current = null;
             }
         };
-    }, [roomId]);
+    }, []);
 
     useEffect(() => {
         if (!editorViewRef.current || !ytextRef.current || !awarenessRef.current) return;
@@ -662,8 +659,7 @@ const CodeEditor = () => {
                                                 })
                                             )}
                                         </div>
-                                    </div>
-                                </>
+                                    </div></>
                             ) : (null)
                         }
                     </div>
