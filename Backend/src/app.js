@@ -1,59 +1,29 @@
-// app.js
-import express from 'express';
-import http from 'http';
-import cors from 'cors';
-import { Server as SocketServer } from 'socket.io';
+import express from 'express'
+import http from 'http'
+import cors from 'cors'
+import { Server as SocketServer } from 'socket.io'
 import cookieParser from 'cookie-parser';
-import rateLimit from 'express-rate-limit';
-import dotenv from 'dotenv';
 
-dotenv.config({ path: './.env' });
+import dotenv from 'dotenv'
+dotenv.config({ path: './.env' })
 
 const app = express();
-const server = http.createServer(app);
-
-const io = new SocketServer(server, {
-  cors: {
-    origin: process.env.CORS_ORIGIN,
-    methods: ['GET', 'POST'],
-    credentials: true
-  }
-});
-
-// Apply rate limit for code execution POSTs (optional safeguard)
-const executionLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: 'Too many execution requests, please try again later.'
-});
-app.use('/execution', executionLimiter); // optional if used for REST fallback
 
 app.use(cors({
   origin: process.env.CORS_ORIGIN,
-  credentials: true
+  credentials: true,
 }));
-app.use(express.json({ limit: '16kb' }));
-app.use(express.urlencoded({ extended: true, limit: '16kb' }));
-app.use(express.static('public'));
+
+app.use(express.json({ limit: "16kb" }));
+
+app.use(express.urlencoded({ extended: true, limit: "16kb" }));
+
+app.use(express.static("public"));
+
 app.use(cookieParser());
-app.use((req, res, next) => {
-  if (req.headers.upgrade === 'websocket') {
-    console.log('🔄 WebSocket upgrade request to:', req.url);
-  }
-  next();
-});
-app.get('/test-ws', (req, res) => {
-  res.send(`
-    <script>
-      const ws = new WebSocket('${req.protocol === 'https' ? 'wss' : 'ws'}://${req.get('host')}/yjs');
-      ws.onopen = () => console.log('✅ WebSocket connected');
-      ws.onerror = (err) => console.error('❌ WebSocket error:', err);
-      ws.onclose = () => console.log('🔒 WebSocket closed');
-    </script>
-    <h1>Check console for WebSocket test results</h1>
-  `);
-});
-// API routes
+
+const server = http.createServer(app)
+
 import roomRoutes from './routes/roomRoutes.js';
 import fileRoutes from './routes/fileRoutes.js';
 import userRoutes from './routes/userRoutes.js';
@@ -64,9 +34,18 @@ app.use('/api/files', fileRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/chat', chatRoutes);
 
-// WebSocket chat handler
-import { handleChatSocket } from './socket/socket.js';
-handleChatSocket(io);
+const io = new SocketServer(server, {
+  cors: {
+    origin: process.env.CORS_ORIGIN,
+    methods: ['GET', 'POST'],
+    credentials: true
+  }
+})
 
-// Export shared HTTP server and socket.io instance
-export { server, io };
+import { handleChatSocket } from './socket/socket.js';
+import { handleCodeExecutionSocket } from './execution/index.js';
+
+handleChatSocket(io);
+handleCodeExecutionSocket(io);
+
+export { server, io }
