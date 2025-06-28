@@ -1,0 +1,16 @@
+{
+    "name": "hocuspocus-server",
+    "version": "1.0.0",
+    "main": "server.js",
+    "type": "module",
+    "scripts": {
+        "start": "nodemon server.js"
+    },
+    "dependencies": {
+        "@hocuspocus/server": "^3.1.7",
+        "dotenv": "^16.3.1",
+        "express": "^5.1.0",
+        "mongoose": "^8.16.1",
+        "nodemon": "^3.1.10"
+    }
+}
