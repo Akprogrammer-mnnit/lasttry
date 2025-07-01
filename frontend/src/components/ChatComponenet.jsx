@@ -8,7 +8,6 @@ const api = axios.create({
     withCredentials: true,
 });
 
-
 const Chat = ({ roomId, userId, username }) => {
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
