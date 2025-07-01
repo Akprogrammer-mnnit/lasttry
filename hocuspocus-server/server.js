@@ -179,4 +179,3 @@ export const hasRoomSpace = (roomId) => {
 server.listen().then(() => {
   console.log('✅ Yjs WebSocket server running on ws://localhost:1234')
 })
-
